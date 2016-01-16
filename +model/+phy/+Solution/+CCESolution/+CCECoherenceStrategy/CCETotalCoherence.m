@@ -7,7 +7,7 @@ classdef CCETotalCoherence < handle
         cluster_coherence_strategy
         center_spin        
         coherence_matrix
-        cluster_coherence_tilde_matrix
+        coherence_tilde_matrix
         coherence
     end
     
@@ -30,13 +30,13 @@ classdef CCETotalCoherence < handle
 
                bath_cluster=iter.getItem(n);
                central_espin={obj.center_spin.espin};
-               cluster=model.phy.SpinCollection.SpinCollection();
-               cluster.spin_source=model.phy.SpinCollection.Strategy.FromSpinList([central_espin, bath_cluster]);
-               cluster.generate();
+               cluster_sc=model.phy.SpinCollection.SpinCollection();% spin collection of a cluster
+               cluster_sc.spin_source=model.phy.SpinCollection.Strategy.FromSpinList([central_espin, bath_cluster]);
+               cluster_sc.generate();
                 
                strategy_name=obj.cluster_coherence_strategy;
                cluster_strategy=model.phy.Solution.CCESolution.CCECoherenceStrategy.(strategy_name);
-               cluster_strategy.generate(cluster);
+               cluster_strategy.generate(cluster_sc);
                cluster_cell{1,n}=cluster_strategy;
 
             end
@@ -64,8 +64,8 @@ classdef CCETotalCoherence < handle
 
            disp('calculate the cluster-coherence matrix ...');
            tic
+           parpool();
            parfor n=1:ncluster 
-%            for n=1:ncluster 
               Condition=model.phy.LabCondition.getCondition;
               Condition.setValue('magnetic_field',MagneticField);
               cluster=clu_cell{1,n};
@@ -122,7 +122,7 @@ classdef CCETotalCoherence < handle
             end
             coh.('coherence')= coh_total;            
            if ncluster<20000          
-               obj.cluster_coherence_tilde_matrix=coh_tilde_mat;
+               obj.coherence_tilde_matrix=coh_tilde_mat;
            else
                timeTag=datestr(clock,'yyyymmdd_HHMMSS');
                save([OUTPUT_FILE_PATH, 'coherence_tilde_matrix', timeTag, '.mat'],'coh_tilde_mat');

@@ -5,26 +5,28 @@ classdef DensityMatrixEvolution< model.phy.Dynamics.AbstractEvolutionKernel
     
     properties
         timelist
+        initial_state_type
         matrix_prefactor
         matrixList
         result
     end
     
     methods
-          function obj=DensityMatrixEvolution(qoperatorList, prefactor)
-              noperator=length(qoperatorList);
-               if nargin>1
+          function obj=DensityMatrixEvolution(qoperatorList,initial_state_type, prefactor)
+              noperator=length(qoperatorList);               
+              obj.matrixList=cell(1,noperator);
+              for n=1:noperator
+                   obj.matrixList{1,n}=qoperatorList{n}.getMatrix();
+              end
+              
+              obj.initial_state_type=initial_state_type;
+              
+              if nargin>2
                    obj.matrix_prefactor=prefactor;
-               else
+              else
                    obj.matrix_prefactor=[-1,1];
-               end
-               
-               obj.matrixList=cell(1,noperator);
-
-               for n=1:noperator
-                   obj.matrixList{1,n}=obj.matrix_prefactor(n)*qoperatorList{n}.getMatrix();
-               end
-                obj.result=0;
+              end             
+              obj.result=0;
           end
                  
           function state_out = calculate_evolution(obj, state_in, timelist)
@@ -36,7 +38,7 @@ classdef DensityMatrixEvolution< model.phy.Dynamics.AbstractEvolutionKernel
                core_mat_list=cell(1,noperator);
                evolution_mat_list=cell(1,noperator);
                for m=1:noperator %initial the core matrice                  
-                   core_mat_list{m}=expm(1i*dt*obj.matrixList{1,m});
+                   core_mat_list{m}=expm(1i*obj.matrix_prefactor(m)*dt*obj.matrixList{1,m});
                    evolution_mat_list{m}=1;
                end
                state_out=cell(1,ntime);

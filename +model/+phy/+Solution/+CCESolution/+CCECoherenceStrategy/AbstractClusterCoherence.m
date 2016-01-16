@@ -5,19 +5,20 @@ classdef AbstractClusterCoherence < handle
     properties
       spin_collection
       coherence
-      hamiltonian_list
+      hamiltonian_cell
+      hami_list      
       preoperator_factor
       npulse
     end
     
     methods
-        function obj=AbstractClusterCoherence(cluster)            
+        function obj=AbstractClusterCoherence(cluster_sc)            
             if nargin>0
-                obj.generate(cluster);
+                obj.generate(cluster_sc);
             end
         end 
-        function generate(obj,cluster)
-            obj.spin_collection=cluster;
+        function generate(obj,cluster_sc)
+            obj.spin_collection=cluster_sc;
         end
         %  generate reduced hamiltonian for the given central spin states
         function reduced_hami = gen_reduced_hamiltonian(obj,center_spin_state,is_secular)
@@ -58,15 +59,15 @@ classdef AbstractClusterCoherence < handle
                  parity=parity_list(m); 
                  switch parity
                         case 0
-                            hami=hamiCell{1,1};                       
+                            hami=hamiCell{1};                       
                         case 1
-                            hami=hamiCell{1,2};
+                            hami=hamiCell{2};
                         otherwise
                             error('wrong parity of the index of the hamiltonian sequence.');
                  end
                  hami_list{m}=hami;
             end
-            obj.hamiltonian_list=hami_list;
+            obj.hami_list=hami_list;
             obj.preoperator_factor=time_seq;
         end
 
@@ -89,7 +90,134 @@ classdef AbstractClusterCoherence < handle
                 time_seq=[-1*seq,seq];
             end     
         end
+        
+        function [liouList,prefactor]=gen_liouvillian_list(obj)
+            h_list=obj.hami_list;
+            hami_prefactor=obj.preoperator_factor;
+            noperator=length(obj.hami_list);
+            if mod(noperator,2)==1
+                error('The number of the cce hamiltonians is not a even number.');
+            end
+            liouList=cell(1,noperator/2);
+            for kk=1:noperator/2
+                hami1=h_list{kk};
+                hami2=h_list{noperator-kk+1};
+                liouList{noperator/2-kk+1}=hami1.flat_sharp_circleC(hami2);
+            end
+            prefactor=-1i*abs(hami_prefactor(1:noperator/2));           
+        end
+    
+        function coh=calculate_coherence_hilbert(obj,bath_cluster,state,statetype,timelist)
+            h_list=obj.hami_list;
+            hami_prefactor=obj.preoperator_factor;
+            %Observable
+            obs=model.phy.QuantumOperator.SpinOperator.Observable(bath_cluster,'IdentityMatrix');
+            obs.setMatrix(1);
+            % Evolution
+            d_mat_evolution=model.phy.Dynamics.EvolutionKernel.DensityMatrixEvolution(h_list,statetype,hami_prefactor);
+            dynamics=model.phy.Dynamics.QuantumDynamics(d_mat_evolution);
+            dynamics.set_initial_state(state,'Hilbert');
+
+            dynamics.set_time_sequence(timelist);
+            dynamics.addObervable({obs});
+            dynamics.calculate_mean_values();
+            coh=dynamics.observable_values;
+        end
+
+        function coh=calculate_coherence_liouville(obj,bath_cluster,state,statetype,timelist)
+            %Observable
+            obs=model.phy.QuantumOperator.SpinOperator.Observable(bath_cluster,'IdentityMatrix');
+            dim=obs.dim;
+            obs.setMatrix(speye(dim));
+            % Evolution
+            [liouList,prefactor]=obj.gen_liouvillian_list();
+            d_mat_evolution=model.phy.Dynamics.EvolutionKernel.MatrixVectorEvolution(liouList,statetype,prefactor);
+            dynamics=model.phy.Dynamics.QuantumDynamics(d_mat_evolution);
+            dynamics.set_initial_state(state,'Liouville');
+            dynamics.set_time_sequence(timelist);
+            dynamics.addObervable({obs});
+            dynamics.calculate_mean_values();
+            coh=dynamics.observable_values;
+        end
+    
+        function [coh,coh_tilde]=calculater_cluster_coherence_tilde(obj,center_spin_states,timelist,varargin)
+            %   Calculate the tilde coherence of a given cluster
+            p = inputParser;
+            addRequired(p,'center_spin_states');
+            addRequired(p,'timelist');
+            addOptional(p,'npulse',0,@isnumeric);
+            addOptional(p,'is_secular',0,@isnumeric); 
+
+            parse(p,center_spin_states,timelist,varargin{:});
+
+            obj.npulse=p.Results.npulse;
+            center_spin_states=p.Results.center_spin_states;
+            is_secular=p.Results.is_secular;
+            timelist=p.Results.timelist;
+            
+            coh=obj.calculate_cluster_coherence(center_spin_states,timelist,'npulse',obj.npulse,'is_secular',is_secular);
+            subclusters=obj.generate_subclusters();
+            len_subclus=length(subclusters);
+            if  len_subclus==0
+                coh_tilde=coh;
+            elseif len_subclus>0 
+                 coh_tilde=coh;
+                 for m=1:len_subclus
+                    cluster=subclusters{m};
+                    coh_tilde_sub=cluster.calculater_cluster_coherence_tilde(center_spin_states,timelist,'npulse',obj.npulse,'is_secular',is_secular);
+                    coh_tilde=coh_tilde./coh_tilde_sub;
+                end
+            end
+
+        end
+        
+        function subclusters=generate_subclusters(obj)
+            cluster_sc=obj.spin_collection;
+            nspin=cluster_sc.getLength;
+            
+            %generate index for all possible subclusters
+            if nspin==2
+                index_list=[];
+            elseif nspin==3
+                index_list=mat2cell([1,2;1,3],[1,1],2);
+            elseif nspin>3               
+                idx_base=2:nspin;
+                index_list=mat2cell([ones(nspin-1,1),idx_base'],ones(1,nspin-1),2);
+                for kk=2:nspin-2
+                    mat=nchoosek(idx_base,kk);
+                    len=size(mat,1);
+                    mat=[ones(len,1),mat];
+                    idx2add=mat2cell(mat,ones(1,len),kk+1);
+                    index_list=[index_list;idx2add];
+                end
+            else
+                error('This cluster is not a well defined cluster.');
+            end
+            
+            %generate all possible subclusters
+            if isempty(index_list)
+                subclusters=[];
+            else
+                iter=model.phy.SpinCollection.Iterator.SpinIterator(cluster_sc,index_list);
+                nsubcluster=iter.getLength();
+                subclusters=cell(1,nsubcluster);
+                
+                classname=class(obj);
+                for n=1:nsubcluster
+                   spins=iter.getItem(n);
+                   subcluster_sc=model.phy.SpinCollection.SpinCollection();% spin collection of a cluster
+                   subcluster_sc.spin_source=model.phy.SpinCollection.Strategy.FromSpinList(spins);
+                   subcluster_sc.generate();
+
+                   subcluster=eval([classname, '(subcluster_sc)']);                   
+                   subclusters{1,n}=subcluster;
+                end
+            end
+            
+        end
     end
+    
+        
     
     methods (Abstract)
         coh=calculate_cluster_coherence(obj,para);

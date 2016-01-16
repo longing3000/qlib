@@ -4,31 +4,57 @@ classdef MatrixVectorEvolution < model.phy.Dynamics.AbstractEvolutionKernel
     
     properties
         matrix
+        matrix_cell
         result
         matrix_prefactor
         initial_state_type
     end
     
     methods
-        function obj=MatrixVectorEvolution(qOperator, initial_state_type, prefactor)
+        function obj=MatrixVectorEvolution(qOperators, initial_state_type, prefactors)
             try
-                obj.matrix=qOperator.getMatrix();
+                if iscell(qOperators)
+                    noperators=length(qOperators);               
+                    mat_cell=cell(1,noperators);
+                    for kk=1:noperators
+                        mat_cell{kk}=qOperators{kk}.getMatrix();              
+                    end
+                    obj.matrix_cell=mat_cell;
+                    obj.matrix=[];
+                else
+                    obj.matrix=qOperators.getMatrix;
+                    obj.matrix_cell=[];
+                end
             catch
-                error([class(qOperator), 'does not have a property of matrix']);
+                error([class(qOperators), 'does not have a property of matrix']);
             end
             obj.result=[];
             
             obj.initial_state_type=initial_state_type;
             
             if nargin > 2
-                obj.matrix_prefactor= prefactor;
+                obj.matrix_prefactor= prefactors;
             else
                 obj.matrix_prefactor= -1.j;
             end
         end
         
         function state_out=evolve_step(obj, state_in, dt)
-            state_out=expv(dt, obj.matrix_prefactor*obj.matrix, state_in);
+            if isempty(obj.matrix)
+                noperator=length(obj.matrix_cell);
+                nsection=length(obj.matrix_prefactor);
+                state=state_in;
+                for kk=1:nsection
+                   op_idx=mod(kk,noperator);
+                   if op_idx==0
+                      op_idx=noperator; 
+                   end
+                   state=expv(obj.matrix_prefactor(kk)*dt, obj.matrix_cell{op_idx}, state); 
+                end
+                state_out=state;
+            else
+                state_out=expv(obj.matrix_prefactor*dt, obj.matrix, state_in);
+            end
         end
         
         function state_out=calculate_evolution(obj, state_in, time_list)

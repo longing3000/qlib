@@ -7,9 +7,32 @@ classdef DQTInteraction < model.phy.SpinInteraction.SpinChainInteraction.Abstrac
     
     methods
         function obj=DQTInteraction(spin_collection, para)
-            iter=model.phy.SpinCollection.Iterator.ChainNeighbouringIterator(spin_collection);
-            obj@model.phy.SpinInteraction.SpinChainInteraction.AbstractSpinChainInteraction(spin_collection, para, iter);
+            nspin=spin_collection.getLength;
+            n_interaction=size(para.interaction,1);
+            if n_interaction==nspin-1
+                iter=model.phy.SpinCollection.Iterator.ChainNeighbouringIterator(spin_collection);
+            elseif n_interaction==nspin
+                iter=model.phy.SpinCollection.Iterator.ChainNeighbouringIterator(spin_collection,'ring_index');
+            else
+                erro('wrong size of the interaction parameter!');
+            end
+            obj@model.phy.SpinInteraction.SpinChainInteraction.AbstractSpinChainInteraction(para, iter);
             obj.nbody=2;
+        end
+        
+        function skp=single_skp_term(obj)
+            spins=obj.iter.currentItem();
+            idx=obj.iter.currentIndex();
+            spin1=spins{1}; spin2=spins{2};
+            coeff=obj.calculate_coeff(spins);
+            
+            mat1=spin1.sx; mat2=spin2.sx;
+            xxTerm=obj.kron_prod(coeff, idx, {mat1, mat2});
+            
+            mat1=spin1.sy; mat2=spin2.sy;
+            yyTerm=obj.kron_prod(-coeff, idx, {mat1, mat2});
+            
+            skp=xxTerm+yyTerm;
         end
         
         function mat=calculate_matrix(obj)

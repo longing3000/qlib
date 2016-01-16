@@ -1,4 +1,4 @@
-classdef SpinChain < model.phy.Solution.AbstractSolution
+classdef SpinChainSolution < model.phy.Solution.AbstractSolution
     %XYMODEL Summary of this class goes here
     %   Detailed explanation goes here
     
@@ -6,7 +6,7 @@ classdef SpinChain < model.phy.Solution.AbstractSolution
     end
     
     methods
-        function obj=SpinChain(xml_file)
+        function obj=SpinChainSolution(xml_file)
             obj@model.phy.Solution.AbstractSolution(xml_file);
         end
         
@@ -16,8 +16,16 @@ classdef SpinChain < model.phy.Solution.AbstractSolution
             obj.parameters.SpinCollectionStrategy = p.get_parameter('SpinCollection', 'Source');
             obj.parameters.spinType = p.get_parameter('SpinCollection', 'SpinType');
             obj.parameters.nspin  = p.get_parameter('SpinCollection', 'SpinNum');
+            
+            obj.parameters.AddOnSite = p.get_parameter('Interaction', 'AddOnSite');
             obj.parameters.onSite = p.get_parameter('Interaction', 'OnSite');
+            obj.parameters.AddDqtInt = p.get_parameter('Interaction', 'AddDqtInt');
             obj.parameters.dqtInt = p.get_parameter('Interaction', 'DqtInt');
+            obj.parameters.AddXYInt = p.get_parameter('Interaction', 'AddXYInt');
+            obj.parameters.xyInt = p.get_parameter('Interaction', 'XYInt');
+            obj.parameters.AddDipInt = p.get_parameter('Interaction', 'AddDipInt');
+            obj.parameters.dipInt = p.get_parameter('Interaction', 'DipInt');
+            
             obj.parameters.TimeList = p.get_parameter('Dynamics',  'TimeList');
             
             %%iniital state
@@ -32,6 +40,21 @@ classdef SpinChain < model.phy.Solution.AbstractSolution
             end
             obj.parameters.InitialStateType = tp;
             obj.parameters.InitialState = st;
+            
+            %Clustering states
+                                    
+            obj.parameters.load_cluster_iter=p.get_parameter('Clustering','LoadCluterIterator');
+            if obj.parameters.load_cluster_iter
+                CluterIteratorName=p.get_parameter('Clustering','CluterIteratorName');
+                data=load([OUTPUT_FILE_PATH,CluterIteratorName]);
+                obj.keyVariables('cluster_iterator')=data.cluster_iterator;
+                disp('cluster_iterator loaded.');
+            else
+                obj.parameters.CutOff=p.get_parameter('Clustering', 'CutOff');
+                obj.parameters.MaxOrder=p.get_parameter('Clustering', 'MaxOrder');
+            end
+            
+            
             
             %%Observables
             nObs=p.get_parameter('Observable', 'ObservableNumber');
@@ -49,14 +72,23 @@ classdef SpinChain < model.phy.Solution.AbstractSolution
         
         
         function perform(obj)
+            import model.phy.QuantumOperator.MatrixStrategy.FromKronProd
+            
             spin_collection=obj.GetSpinList();
-            [hamiltonian, liouvillian] = obj.GetHamiltonianLiouvillian(spin_collection);
-            initial_state               = obj.GetInitialState(spin_collection);
-            observables                = obj.GetObservables(spin_collection);
+            obj.keyVariables('spin_collection')=spin_collection;
+            
+            matrix_strategy=FromKronProd();
+            [hamiltonian, liouvillian] = obj.GetHamiltonianLiouvillian(spin_collection,matrix_strategy);
+            initial_state              = obj.GetInitialState(spin_collection,matrix_strategy);
+            observables                = obj.GetObservables(spin_collection,matrix_strategy);
+            obj.StoreKeyVariables(spin_collection, hamiltonian, liouvillian, initial_state)
+                                    
             dynamics                   = obj.StateEvolve(hamiltonian, liouvillian, initial_state);
             mean_values                = obj.GetMeanValues(dynamics, observables);
-
-            obj.StoreKeyVariables(spin_collection, hamiltonian, liouvillian, initial_state, observables, dynamics, mean_values);
+            obj.StoreKeyVariables(dynamics,mean_values);
+            
+            final_states=dynamics.kernel.result;         
+            [~] = obj.GetStateInfo(spin_collection,final_states);
         end
     end
     

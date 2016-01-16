@@ -9,7 +9,7 @@ classdef TransformOperator < model.phy.QuantumOperator.MultiSpinOperator
         function obj=TransformOperator(spin_collection, str)
             obj@model.phy.QuantumOperator.MultiSpinOperator(spin_collection);
             if nargin > 1
-                obj.addInteraction(model.phy.SpinInteraction.InteractionString(spin_collection, str));
+                obj.addInteraction(model.phy.SpinInteraction.AdditionalSpinInteraction.InteractionString(spin_collection, str));
             end
             
         end

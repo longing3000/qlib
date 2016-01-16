@@ -101,7 +101,18 @@
         
         function v=getVector(obj)
             mat=obj.getMatrix();
-            v=mat(:);
+            if isa(mat,'double')
+                v=mat(:);
+            elseif isa(mat,'KronProd' )
+                v=kron_prod2vector(mat); 
+            else isa(mat,'model.math.SumKronProd' )            
+                nProd=mat.nProd;
+                v=kron_prod2vector(mat.kron_prod_cell{1});
+                for kk=2:nProd
+                  v=v+kron_prod2vector(mat.kron_prod_cell{kk});
+                end
+            end
+
         end
                 
         function transform(obj, transform_operator)
@@ -150,22 +161,37 @@
         function super_operator=sharp(obj)
             super_operator=model.phy.QuantumOperator.MultiSpinSuperOperator(obj.spin_collection, obj.interaction_list);
             
-            Bmat=obj.getMatrix(); eyeMat=speye(obj.dim);
-            super_operator.setMatrix(kron(Bmat.', eyeMat));
+            if isa(obj.matrix_strategy, 'model.phy.QuantumOperator.MatrixStrategy.FromKronProd')
+                super_operator.name=[obj.name, '_sharp'];
+                super_operator.setMatrix(obj.matrix.sharp);
+            else
+                Bmat=obj.getMatrix(); eyeMat=speye(obj.dim);
+                super_operator.setMatrix(kron(Bmat.', eyeMat));
+            end
         end
         
         function super_operator=flat(obj)
             super_operator=model.phy.QuantumOperator.MultiSpinSuperOperator(obj.spin_collection, obj.interaction_list);
             
-            Amat=obj.getMatrix(); eyeMat=speye(obj.dim);
-            super_operator.setMatrix(kron(eyeMat, Amat));
+            if isa(obj.matrix_strategy, 'model.phy.QuantumOperator.MatrixStrategy.FromKronProd')
+                super_operator.name=[obj.name, '_flat'];
+                super_operator.setMatrix(obj.matrix.flat);
+            else
+                Amat=obj.getMatrix(); eyeMat=speye(obj.dim);
+                super_operator.setMatrix(kron(eyeMat, Amat));
+            end
         end
         
         function super_operator=circleC(obj)
             super_operator=model.phy.QuantumOperator.MultiSpinSuperOperator(obj.spin_collection, obj.interaction_list);
             
-            Cmat=obj.getMatrix(); eyeMat=speye(obj.dim);
-            super_operator.setMatrix(kron(eyeMat, Cmat)-kron(conj(Cmat), eyeMat));
+            if isa(obj.matrix_strategy, 'model.phy.QuantumOperator.MatrixStrategy.FromKronProd')
+                super_operator.name=[obj.name, '_circleC'];
+                super_operator.setMatrix(obj.matrix.circleC);
+            else
+                Cmat=obj.getMatrix(); eyeMat=speye(obj.dim);
+                super_operator.setMatrix(kron(eyeMat, Cmat)-kron(Cmat.', eyeMat));
+            end
         end
         
         function super_operator=flat_sharp(obj, sharp_op)
@@ -179,10 +205,27 @@
             super_operator=model.phy.QuantumOperator.MultiSpinSuperOperator(obj.spin_collection, obj.interaction_list);
             
             Amat=obj.getMatrix(); Bmat=sharp_op.getMatrix(); eyeMat=speye(obj.dim);
-            super_operator.setMatrix(kron(Bmat.', eyeMat)-kron(eyeMat, Amat));
+            super_operator.setMatrix(kron(eyeMat, Amat)-kron(Bmat.', eyeMat));
         end
 
     end
     
-end
+ end
+
+ function v=kron_prod2vector(kp_mat)
+      opset=kp_mat.opset;
+      opinds=kp_mat.opinds;
+      domainsizes=kp_mat.domainsizes;
+      maxdim=kp_mat.maxdim;
+      v=1;
+      for kk=1:maxdim
+          idx=opinds(kk);
+          mat=opset{idx};
+          if size(mat,2)==1
+              mat=speye(domainsizes(kk));
+          end
+          v=kron(mat(:),v);
+      end
+      v=kp_mat.scalarcoeff*v;
+ end
 
