@@ -190,7 +190,7 @@
                 super_operator.setMatrix(obj.matrix.circleC);
             else
                 Cmat=obj.getMatrix(); eyeMat=speye(obj.dim);
-                super_operator.setMatrix(kron(eyeMat, Cmat)-kron(conj(Cmat), eyeMat));
+                super_operator.setMatrix(kron(eyeMat, Cmat)-kron(Cmat.', eyeMat));
             end
         end
         
@@ -205,7 +205,7 @@
             super_operator=model.phy.QuantumOperator.MultiSpinSuperOperator(obj.spin_collection, obj.interaction_list);
             
             Amat=obj.getMatrix(); Bmat=sharp_op.getMatrix(); eyeMat=speye(obj.dim);
-            super_operator.setMatrix(kron(Bmat.', eyeMat)-kron(eyeMat, Amat));
+            super_operator.setMatrix(kron(eyeMat, Amat)-kron(Bmat.', eyeMat));
         end
 
     end

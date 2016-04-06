@@ -9,7 +9,7 @@ import model.phy.SpinCollection.SpinCollection
 
 %quantum operators
 import model.phy.QuantumOperator.SpinOperator.Hamiltonian
-import model.phy.QuantumOperator.SpinOperator.DecoherenceSuperOperator
+import model.phy.QuantumOperator.SpinOperator.DecoherenceSuperOperator.QOMDecohSuperOperator
 import model.phy.QuantumOperator.SpinOperator.DensityMatrix
 import model.phy.QuantumOperator.SpinOperator.Observable
 
@@ -60,7 +60,7 @@ decay_rate_list.Gamma_parallel_list=Gamma_parallel_list;
 
 % decay_rate_list.Gamma_vertical_list=GammaE_vertical;
 % decay_rate_list.Gamma_parallel_list=GammaE_parallel;
-L_decay=DecoherenceSuperOperator(spin_collection,decay_rate_list);
+L_decay=QOMDecohSuperOperator(spin_collection,decay_rate_list);
 L_decay_mat=L_decay.getMatrix;
 
 L_tot=-1i*L_h_mat+L_decay_mat;

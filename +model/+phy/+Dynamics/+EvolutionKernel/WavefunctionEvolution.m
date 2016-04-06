@@ -1,7 +1,7 @@
-classdef DensityMatrixEvolution< model.phy.Dynamics.AbstractEvolutionKernel
-    %ENSEMBLECCE 
-    %This class is used to calculate the time evolutuion of the density
-    %matrix in the Hilbert Spase
+classdef WavefunctionEvolution < model.phy.Dynamics.AbstractEvolutionKernel
+    %WAVEFUNCTIONEVOLUTION Summary of this class goes here
+    % This class is used to calculate the time evolutuion of the
+    % wavefuncton in the Hilbert Spase
     
     properties
         timelist
@@ -12,7 +12,7 @@ classdef DensityMatrixEvolution< model.phy.Dynamics.AbstractEvolutionKernel
     end
     
     methods
-          function obj=DensityMatrixEvolution(qoperatorList,initial_state_type, prefactor)
+        function obj=WavefunctionEvolution(qoperatorList,initial_state_type, prefactor)
               noperator=length(qoperatorList);               
               obj.matrixList=cell(1,noperator);
               for n=1:noperator
@@ -24,12 +24,12 @@ classdef DensityMatrixEvolution< model.phy.Dynamics.AbstractEvolutionKernel
               if nargin>2
                    obj.matrix_prefactor=prefactor;
               else
-                   obj.matrix_prefactor=[-1i,1i];
+                   obj.matrix_prefactor=-1i;
               end             
               obj.result=0;
-          end
-                 
-          function state_out = calculate_evolution(obj, state_in, timelist)
+        end
+          
+        function state_out = calculate_evolution(obj, state_in, timelist)
                obj.timelist=timelist;
                ntime=length(timelist);
                dt=timelist(2)-timelist(1);
@@ -47,27 +47,29 @@ classdef DensityMatrixEvolution< model.phy.Dynamics.AbstractEvolutionKernel
                    for m=1:noperator                      
                      evolution_mat_list{1,m}=evolution_mat_list{1,m}*core_mat_list{1,m};
                    end
-                   mat=1;
+                   wave_vec=state_in;
                   for m=1:noperator
-                   if m==noperator/2
-                       mat=mat*evolution_mat_list{1,m}*state_in;
-                   else
-                       mat=mat*evolution_mat_list{1,m};
-                   end
+                       wave_vec=evolution_mat_list{1,m}*wave_vec;
                   end
-                  state_out{1,n}=mat;
+                  state_out{1,n}=wave_vec;
                end
                 obj.result=state_out;
-          end
+        end
                    
 
-          function  mean_val=mean_value(obj, obs_list,varargin)
+        function  mean_val=mean_value(obj, obs_list,varargin)
               ntime=length(obj.timelist);
               len_obs=length(obs_list);
               mean_val=zeros(len_obs,ntime);
+              
               for n=1:len_obs
                   mat=obs_list{n}.getMatrix;
-                  mean_val(n,:)=cellfun(@(s) trace(s*mat), obj.result);
+                  if nargin>2
+                      left_vec=varargin{1}{1};
+                      mean_val(n,:)=cellfun(@(s) left_vec*mat*s, obj.result);
+                  else
+                      mean_val(n,:)=cellfun(@(s) s'*mat*s, obj.result);
+                  end
               end
           end
           

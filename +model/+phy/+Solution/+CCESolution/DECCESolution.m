@@ -1,5 +1,5 @@
-classdef EnsembleCCESolution < model.phy.Solution.CCESolution.AbstractCCESolution
-    %ENSEMBLECCESOLUTION Summary of this class goes here
+classdef DECCESolution < model.phy.Solution.CCESolution.AbstractCCESolution
+    %DECCESolution: We add decoherence on bath spins.
     %   EnsembleCCESolution needs the following input paramters:
     %   1. parameters.SpinCollectionStrategy
     %   2. parameters.InputFile
@@ -13,13 +13,13 @@ classdef EnsembleCCESolution < model.phy.Solution.CCESolution.AbstractCCESolutio
     %   10. parameters.NTime
     %   11. parameters.TMax
     %   12. parameters.TimeList
-
+    %   13. parameters.decay_rate_list
    
     properties
     end
     
     methods
-        function obj=EnsembleCCESolution(xml_file)
+        function obj=DECCESolution(xml_file)
             obj@model.phy.Solution.CCESolution.AbstractCCESolution(xml_file);
         end                    
            
@@ -30,7 +30,7 @@ classdef EnsembleCCESolution < model.phy.Solution.CCESolution.AbstractCCESolutio
            obj.calculate_total_coherence(evolution_para,cluster_para,cluster_iterator); 
            disp('Calculation of this solution finishes.');
         end
-  %%    prepearing  
+%%        
         function [evolution_parameter,cluster_parameter]=pre_calculation(obj,cluster_iterator)
            import model.phy.PhysicalObject.NV
 
@@ -38,8 +38,11 @@ classdef EnsembleCCESolution < model.phy.Solution.CCESolution.AbstractCCESolutio
            evolution_parameter.timelist=obj.parameters.TimeList;
            evolution_parameter.npulse=obj.parameters.NPulse;
            evolution_parameter.is_secular=obj.parameters.IsSecularApproximation;
-           evolution_parameter.MagneticField=obj.parameters.MagneticField; 
-           evolution_parameter.strategy_name=obj.parameters.CCEStrategy;           
+           evolution_parameter.MagneticField=obj.parameters.MagneticField;
+           evolution_parameter.temperature=obj.parameters.temperature;
+           evolution_parameter.strategy_name=obj.parameters.CCEStrategy;
+           evolution_parameter.transverse_decay_rates=obj.parameters.transverse_decay_rates;
+           evolution_parameter.parallel_decay_rates=obj.parameters.parallel_decay_rates;           
                       
            center_spin_name=obj.parameters.SetCentralSpin.name;
            para_central_spin=obj.parameters.SetCentralSpin; 
@@ -49,10 +52,9 @@ classdef EnsembleCCESolution < model.phy.Solution.CCESolution.AbstractCCESolutio
            cluster_parameter.center_spin=center_spin.espin;
            cluster_parameter.bath_spin_collection=cluster_iterator.spin_collection;
         end
-
- %%    Calculate totoal coherence matrix   
+%%        
         function calculate_total_coherence(obj, evolu_para,clst_para,cluster_iter) 
-%           evolution parameters  
+%          evolution parameters  
 %            evolu_para.npulse:: the pulse number
 %            evolu_para.is_secular:: determine whether the secular approximation is taken or not
 %            evolu_para.MagneticField:: the magnetic field vector             
@@ -62,50 +64,53 @@ classdef EnsembleCCESolution < model.phy.Solution.CCESolution.AbstractCCESolutio
 
 %         cluster parameters
 %           clst_para.bath_spin_collection:: a SpinCollection, including the  all bath spins
-%           clst_para.center_spin:: a Spin                                     
+%           clst_para.center_spin:: a Spin
+%           clst_para.decay_rate_list:: a list gives out the decoherence rate for bath spins                                    
 
 
            ncluster=cluster_iter.getLength;
            ntime=length(evolu_para.timelist);           
            cluster_index_list=cluster_iter.index_list;
            MagneticField=evolu_para.MagneticField;
-
+%            temperature=evolu_para.temperature;
+           
            CoherenceMatrix=zeros(ncluster,ntime);
            disp('calculate the cluster-coherence matrix ...');
-
+           tic
            
           %In order to eliminate the parfor warning, I have to arrange the
           %swith...case... in this form. Beside, I try to add a field "clst_index" in the structure data "clst_para" in every loop first. 
           % But this action is forbidden in parfor circulation. So I have to change the way to construct 
           % the AbstractClusterCoherence class. This is pretty ulgy, but I have to do this. 
-          tic
-          parpool();
-          parfor n=1:ncluster 
+
+%            parpool();
+           for n=501:ncluster 
               Condition=model.phy.LabCondition.getCondition;              
               Condition.setValue('magnetic_field',MagneticField);
+%               Condition.setValue('temperature',temperature);
 
               %calculate cluster coherence              
-              clst_index=cluster_index_list{n,1};  
-              clst_coh=model.phy.Solution.CCESolution.CCECoherenceStrategy.ECCEClusterCoherence(clst_index,clst_para);
+              clst_index=cluster_index_list{n,1};
+              clst_coh=model.phy.Solution.CCESolution.CCECoherenceStrategy.DECCEClusterCoherence(clst_index,clst_para);
               CoherenceMatrix(n,:)=clst_coh.calculate_cluster_coherence(evolu_para);
               delete(clst_coh);
-          end
-          delete(gcp('nocreate'));
+           end
+%            delete(gcp('nocreate'));
+           toc
+           disp('calculation of the cluster-coherence matrix finished.');          
 
-          toc
-          disp('calculation of the cluster-coherence matrix finished.');          
-
-          obj.calculate_tilde_coh_matrix(CoherenceMatrix,cluster_iter);
+           obj.calculate_tilde_coh_matrix(CoherenceMatrix,cluster_iter);
             
-          if ncluster<20000
+           if ncluster<20000
                 obj.keyVariables('coherence_matrix')=CoherenceMatrix;
-          else
+           else
                 timeTag=datestr(clock,'yyyymmdd_HHMMSS');
                 save([OUTPUT_FILE_PATH, 'coherence_matrix', timeTag, '.mat'],'CoherenceMatrix');
                 clear CoherenceMatrix;
-          end
-        end
-         
+           end
+         end
+
+        
     end
     
 end

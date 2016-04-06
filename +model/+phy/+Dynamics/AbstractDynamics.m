@@ -30,22 +30,28 @@ classdef AbstractDynamics < handle
             obj.is_evolved=1;
         end
         
-        function calculate_mean_values(obj)
+        function calculate_mean_values(obj,varargin)
             if ~obj.is_evolved
                 obj.evolve();
             end
-            obj.observable_values=obj.kernel.mean_value(obj.observable_list);
+            obj.observable_values=obj.kernel.mean_value(obj.observable_list,varargin);
         end
         
         
-        function set_initial_state(obj, state,Space)
-            if strcmp(Space,'Liouville')
-                obj.state_in=state.getVector();
-                obj.kernel.result=state.getVector();
-            elseif strcmp(Space,'Hilbert')
-                obj.state_in=state.getMatrix();
+        function set_initial_state(obj, state,varargin)
+            if nargin>2
+                Space=varargin{1};
+                switch Space
+                    case 'Liouville'
+                        obj.state_in=state.getVector();
+                        obj.kernel.result=state.getVector();
+                    case 'Hilbert'
+                        obj.state_in=state.getMatrix();
+                    otherwise
+                        error([class(state), 'does not have a property of vector.']);
+                end
             else
-                error([class(state), 'does not have a property of vector.']);
+                obj.state_in=state;
             end
         end
         

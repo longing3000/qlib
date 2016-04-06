@@ -15,6 +15,9 @@ classdef Spin < model.phy.PhysicalObject.PhysicalObject
         S
         S2
         
+        sx_mat=[]
+        sy_mat=[]
+        sz_mat=[]
         self_hamiltonian
         eigen_vect
         eigen_val
@@ -31,6 +34,10 @@ classdef Spin < model.phy.PhysicalObject.PhysicalObject
           
             obj.S= 0.5*(obj.dim-1);
             obj.S2= obj.S*(obj.S+1);
+            
+            obj.sx_mat=Sx(obj.dim);
+            obj.sy_mat=Sy(obj.dim);
+            obj.sz_mat=Sz(obj.dim);
         end
         
         function set_spin(obj,para)
@@ -46,15 +53,30 @@ classdef Spin < model.phy.PhysicalObject.PhysicalObject
         end
         
         function xmat=sx(obj)
-            xmat=Sx(obj.dim);
+%             if isempty(obj.sx_mat)
+%                 obj.sx_mat=Sx(obj.dim);
+%                 xmat=obj.sx_mat;
+%             else
+                xmat=obj.sx_mat;
+%             end
         end
         
         function ymat=sy(obj)
-            ymat=Sy(obj.dim);
+%             if isempty(obj.sy_mat)
+%                 obj.sy_mat=Sy(obj.dim);
+%                 ymat=obj.sy_mat;
+%             else
+                ymat=obj.sy_mat;
+%             end
         end
         
         function zmat=sz(obj)
-            zmat=Sz(obj.dim);
+%             if isempty(obj.sz_mat)
+%                 obj.sz_mat=Sz(obj.dim);
+%                 zmat=obj.sz_mat;
+%             else
+                zmat=obj.sz_mat;
+%             end
         end
         
         function projMat=p(obj, k)
@@ -63,11 +85,17 @@ classdef Spin < model.phy.PhysicalObject.PhysicalObject
         end
         
         function generalMat=mat(obj, m)
+            if nargin < 2
+               generalMat=speye(obj.dim)/obj.dim; 
+               return;
+            end
+            
             if length(m)==obj.dim
                 generalMat=m;
             else
                 error('dimension mismatch. matrix_dim=%d is assigned, but spin_dimension=%d is needed.', length(m), obj.dim);
             end
+            
         end
         
         function expM=expMat(obj, m)

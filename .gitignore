@@ -14,7 +14,7 @@ doc/output/
 
 +controller/+output/*.mat
 
-
++examples/+SpinChain/SpinChain.m
 
 
 *.un~

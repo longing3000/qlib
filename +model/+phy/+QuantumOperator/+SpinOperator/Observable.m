@@ -8,7 +8,7 @@ classdef Observable < model.phy.QuantumOperator.MultiSpinOperator
     methods
         function obj=Observable(spin_collection,matrix_strategy, name, str)
             obj@model.phy.QuantumOperator.MultiSpinOperator(spin_collection,matrix_strategy);
-            if nargin > 1
+            if nargin > 2
                 obj.setName(name);
                 obj.addInteraction(model.phy.SpinInteraction.AdditionalSpinInteraction.InteractionString(spin_collection, str));
             end

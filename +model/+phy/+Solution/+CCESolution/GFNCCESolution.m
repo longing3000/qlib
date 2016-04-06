@@ -1,6 +1,7 @@
-classdef EnsembleCCESolution < model.phy.Solution.CCESolution.AbstractCCESolution
-    %ENSEMBLECCESOLUTION Summary of this class goes here
-    %   EnsembleCCESolution needs the following input paramters:
+classdef GFNCCESolution < model.phy.Solution.CCESolution.AbstractCCESolution
+    %GFNCCESolution: Gradient noise field is applied to the bath spins
+    % please refer to the explanation in class ""
+    %   GFNCCESolution needs the following input paramters:
     %   1. parameters.SpinCollectionStrategy
     %   2. parameters.InputFile
     %   3. parameters.SetBathSpins
@@ -19,7 +20,7 @@ classdef EnsembleCCESolution < model.phy.Solution.CCESolution.AbstractCCESolutio
     end
     
     methods
-        function obj=EnsembleCCESolution(xml_file)
+        function obj=GFNCCESolution(xml_file)
             obj@model.phy.Solution.CCESolution.AbstractCCESolution(xml_file);
         end                    
            
@@ -38,7 +39,8 @@ classdef EnsembleCCESolution < model.phy.Solution.CCESolution.AbstractCCESolutio
            evolution_parameter.timelist=obj.parameters.TimeList;
            evolution_parameter.npulse=obj.parameters.NPulse;
            evolution_parameter.is_secular=obj.parameters.IsSecularApproximation;
-           evolution_parameter.MagneticField=obj.parameters.MagneticField; 
+           evolution_parameter.MagneticField=obj.parameters.MagneticField;
+           evolution_parameter.correlation_time=obj.parameters.correlation_time;
            evolution_parameter.strategy_name=obj.parameters.CCEStrategy;           
                       
            center_spin_name=obj.parameters.SetCentralSpin.name;
@@ -86,7 +88,7 @@ classdef EnsembleCCESolution < model.phy.Solution.CCESolution.AbstractCCESolutio
 
               %calculate cluster coherence              
               clst_index=cluster_index_list{n,1};  
-              clst_coh=model.phy.Solution.CCESolution.CCECoherenceStrategy.ECCEClusterCoherence(clst_index,clst_para);
+              clst_coh=model.phy.Solution.CCESolution.CCECoherenceStrategy.GFNECCEClusterCoherence(clst_index,clst_para);
               CoherenceMatrix(n,:)=clst_coh.calculate_cluster_coherence(evolu_para);
               delete(clst_coh);
           end

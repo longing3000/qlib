@@ -1,4 +1,4 @@
-classdef SpinChainSolution < model.phy.Solution.AbstractSolution
+classdef QuantumZenoSolution < model.phy.Solution.AbstractSolution
     %XYMODEL Summary of this class goes here
     %   Detailed explanation goes here
     
@@ -6,7 +6,7 @@ classdef SpinChainSolution < model.phy.Solution.AbstractSolution
     end
     
     methods
-        function obj=SpinChainSolution(xml_file)
+        function obj=QuantumZenoSolution(xml_file)
             obj@model.phy.Solution.AbstractSolution(xml_file);
         end
         
@@ -17,16 +17,27 @@ classdef SpinChainSolution < model.phy.Solution.AbstractSolution
             obj.parameters.spinType = p.get_parameter('SpinCollection', 'SpinType');
             obj.parameters.nspin  = p.get_parameter('SpinCollection', 'SpinNum');
             
-            obj.parameters.AddOnSite = p.get_parameter('Interaction', 'AddOnSite');
-            obj.parameters.onSite = p.get_parameter('Interaction', 'OnSite');
-            obj.parameters.AddDqtInt = p.get_parameter('Interaction', 'AddDqtInt');
-            obj.parameters.dqtInt = p.get_parameter('Interaction', 'DqtInt');
-            obj.parameters.AddXYInt = p.get_parameter('Interaction', 'AddXYInt');
-            obj.parameters.xyInt = p.get_parameter('Interaction', 'XYInt');
-            obj.parameters.AddDipInt = p.get_parameter('Interaction', 'AddDipInt');
-            obj.parameters.dipInt = p.get_parameter('Interaction', 'DipInt');
+            obj.parameters.AddOnSite1 = p.get_parameter('Interaction1', 'AddOnSite');
+            obj.parameters.onSite1 = p.get_parameter('Interaction1', 'OnSite');
+            obj.parameters.AddDqtInt1 = p.get_parameter('Interaction1', 'AddDqtInt');
+            obj.parameters.dqtInt1 = p.get_parameter('Interaction1', 'DqtInt');
+            obj.parameters.AddXYInt1 = p.get_parameter('Interaction1', 'AddXYInt');
+            obj.parameters.xyInt1 = p.get_parameter('Interaction1', 'XYInt');
+            obj.parameters.AddDipInt1 = p.get_parameter('Interaction1', 'AddDipInt');
+            obj.parameters.dipInt1 = p.get_parameter('Interaction1', 'DipInt');
+            
+            obj.parameters.AddOnSite2 = p.get_parameter('Interaction2', 'AddOnSite');
+            obj.parameters.onSite2 = p.get_parameter('Interaction2', 'OnSite');
+            obj.parameters.AddDqtInt2 = p.get_parameter('Interaction2', 'AddDqtInt');
+            obj.parameters.dqtInt2 = p.get_parameter('Interaction2', 'DqtInt');
+            obj.parameters.AddXYInt2 = p.get_parameter('Interaction2', 'AddXYInt');
+            obj.parameters.xyInt2 = p.get_parameter('Interaction2', 'XYInt');
+            obj.parameters.AddDipInt2 = p.get_parameter('Interaction2', 'AddDipInt');
+            obj.parameters.dipInt2 = p.get_parameter('Interaction2', 'DipInt');
             
             obj.parameters.TimeList = p.get_parameter('Dynamics',  'TimeList');
+            obj.parameters.nsection = p.get_parameter('Dynamics',  'SectionNum');
+            obj.parameters.proportion = p.get_parameter('Dynamics',  'Proportion');
             
             %%iniital state
             tp=p.get_parameter('InitialState', 'Type');
@@ -78,12 +89,12 @@ classdef SpinChainSolution < model.phy.Solution.AbstractSolution
             obj.keyVariables('spin_collection')=spin_collection;
             
             matrix_strategy=FromKronProd();
-            [hamiltonian, liouvillian] = obj.GetHamiltonianLiouvillian(spin_collection,matrix_strategy);
+            [hami1,hami2, liou1,liou2] = obj.GetHamiltonianLiouvillian(spin_collection,matrix_strategy);
             initial_state              = obj.GetInitialState(spin_collection,matrix_strategy);
             observables                = obj.GetObservables(spin_collection,matrix_strategy);
-            obj.StoreKeyVariables(spin_collection, hamiltonian, liouvillian, initial_state)
+            obj.StoreKeyVariables(spin_collection, hami1,hami2,liou2,liou2, initial_state)
                                     
-            dynamics                   = obj.StateEvolve(hamiltonian, liouvillian, initial_state);
+            dynamics                   = obj.StateEvolve(hami1,hami1, liou1,liou2, initial_state);
             mean_values                = obj.GetMeanValues(dynamics, observables);
             obj.StoreKeyVariables(dynamics,mean_values);
             

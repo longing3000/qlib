@@ -6,9 +6,14 @@
 % in the folder specified by OUTPUT_FILE_PATH
 
 %% Direct evolution
+/Users/ylp/Documents/code/qlib
+tic
 sol=model.phy.Solution.SpinChainSolution('SpinChain.xml');
 sol.perform();
+toc
 
+cd /Users/ylp/Documents/projects/SpinChain/output/
+save('-v7.3',['SpinChain_' sol.timeTag '.mat']);
 %% Load GPU result and calculate Mean value
 % sol.LoadFromGPU([OUTPUT_FILE_PATH, 'Res_iFILE_Data_SpinChain.dat']);
 % 

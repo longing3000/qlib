@@ -54,7 +54,7 @@ classdef ObservableMatrixEvolution < model.phy.Dynamics.AbstractEvolutionKernel
                   mean_val(n,:)=obj.cal_mean_value(mat);
               end
           end
-          function value=cal_mean_value(obj,obs_mat)
+          function value=cal_mean_value(obj,obs_mat,varargin)
               ntime=length(obj.timelist); 
               value=zeros(1,ntime);              
               state_in=obj.initial_state;
